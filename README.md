@@ -1,1 +1,1 @@
-# ai-attendance-project-app
+# ai-attendance-project-app using machine learning
