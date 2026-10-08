@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 
 from src.ui.base_layout import style_background_dashboard, style_base_layout
@@ -14,32 +15,44 @@ import time
 from src.components.dialog_enroll import enroll_dialog
 from src.components.subject_card import subject_card
 
+
 def student_dashboard():
     student_data = st.session_state.student_data
     student_id = student_data['student_id']
+
     c1, c2 = st.columns(2, vertical_alignment='center', gap='xxlarge')
+
     with c1:
         header_dashboard()
+
     with c2:
         st.subheader(f"""Welcome, {student_data['name']} """)
-        if st.button("Logout", type='secondary', key='loginbackbtn', shortcut="control+backspace"):
+        if st.button(
+            "Logout",
+            type='secondary',
+            key='loginbackbtn',
+            shortcut="control+backspace"
+        ):
             st.session_state['is_logged_in'] = False
-            del st.session_state.student_data 
+            del st.session_state.student_data
             st.rerun()
-
 
     st.space()
 
-    c1, c2 =st.columns(2)
+    c1, c2 = st.columns(2)
+
     with c1:
         st.header('Your Enrolled Subjects')
+
     with c2:
-        if st.button('Enroll in Subject', type='primary', width='stretch'):
+        if st.button(
+            'Enroll in Subject',
+            type='primary',
+            width='stretch'
+        ):
             enroll_dialog()
 
-
     st.divider()
-
 
     with st.spinner('Loading your enrolled subjects..'):
         subjects = get_student_subjects(student_id)
@@ -51,21 +64,24 @@ def student_dashboard():
         sid = log['subject_id']
 
         if sid not in stats_map:
-            stats_map[sid] = {"total":0, "attended": 0}
+            stats_map[sid] = {"total": 0, "attended": 0}
 
-        stats_map[sid]['total'] +=1
+        stats_map[sid]['total'] += 1
 
         if log.get('is_present'):
             stats_map[sid]['attended'] += 1
 
-
     cols = st.columns(2)
+
     for i, sub_node in enumerate(subjects):
         sub = sub_node['subjects']
         sid = sub['subject_id']
 
+        stats = stats_map.get(
+            sid,
+            {"total": 0, "attended": 0}
+        )
 
-        stats = stats_map.get(sid,{"total":0, "attended": 0} )
         def unenroll_button(subject_id, subject_name, subject_code):
             if st.button(
                 "Unenroll from this course",
@@ -75,10 +91,11 @@ def student_dashboard():
                 key=f"unenroll_{subject_id}"
             ):
                 unenroll_student_to_subject(student_id, subject_id)
-                st.toast(f"Unenrolled from {subject_name} successfully!")
+                st.toast(
+                    f"Unenrolled from {subject_name} successfully!"
+                )
                 st.rerun()
-        
-        
+
         with cols[i % 2]:
             subject_card(
                 name=sub['name'],
@@ -94,36 +111,53 @@ def student_dashboard():
                     sub['subject_code']
                 )
             )
-        
+
     footer_dashboard()
 
 
 def student_screen():
 
-
     style_background_dashboard()
     style_base_layout()
-
 
     if "student_data" in st.session_state:
         student_dashboard()
         return
-    
-    c1, c2 = st.columns(2, vertical_alignment='center', gap='xxlarge')
+
+    c1, c2 = st.columns(
+        2,
+        vertical_alignment='center',
+        gap='xxlarge'
+    )
+
     with c1:
         header_dashboard()
+
     with c2:
-        if st.button("Go back to Home", type='secondary', key='loginbackbtn', shortcut="control+backspace"):
+        if st.button(
+            "Go back to Home",
+            type='secondary',
+            key='loginbackbtn',
+            shortcut="control+backspace"
+        ):
             st.session_state['login_type'] = None
             st.rerun()
 
-    st.header('Login using FaceID', text_alignment='center')
-    st.space()
-    st.space()
-    
-    show_registration = False
+    st.header(
+        'Login using FaceID',
+        text_alignment='center'
+    )
 
-    photo_source = st.camera_input("Position your face in the center")
+    st.space()
+    st.space()
+
+    # Keep registration form visible across Streamlit reruns
+    if "show_registration" not in st.session_state:
+        st.session_state.show_registration = False
+
+    photo_source = st.camera_input(
+        "Position your face in the center"
+    )
 
     if photo_source:
         img = np.array(Image.open(photo_source))
@@ -133,68 +167,152 @@ def student_screen():
 
             if num_faces == 0:
                 st.warning('Face not found!')
-            elif num_faces >1:
+
+            elif num_faces > 1:
                 st.warning('Multiple faces found')
+
             else:
                 if detected:
                     student_id = list(detected.keys())[0]
+
                     all_students = get_all_students()
-                    student = next((s for s in all_students if s['student_id']==student_id), None)
+
+                    student = next(
+                        (
+                            s for s in all_students
+                            if s['student_id'] == student_id
+                        ),
+                        None
+                    )
 
                     if student:
                         st.session_state.is_logged_in = True
                         st.session_state.user_role = 'student'
                         st.session_state.student_data = student
-                        st.toast(f'Welcome Back {student['name']}')
+
+                        # Fixed quote issue
+                        st.toast(
+                            f"Welcome Back {student['name']}"
+                        )
+
                         time.sleep(1)
                         st.rerun()
+
                 else:
-                    st.info('Face not recognized! You might be a new student!')
-                    show_registration = True
-    if show_registration:
+                    st.info(
+                        'Face not recognized! You might be a new student!'
+                    )
+
+                    # Persist registration state
+                    st.session_state.show_registration = True
+
+    if st.session_state.show_registration:
+
         with st.container(border=True):
+
             st.header('Register new Profile')
-            new_name = st.text_input("Enter your name", placeholder='E.g. Hamza Rizvi')
+
+            new_name = st.text_input(
+                "Enter your name",
+                placeholder='E.g. Hamza Rizvi'
+            )
 
             st.subheader('Optional : Voice Enrollment')
-            st.info("Enroll your for voice only attendance")
 
+            st.info(
+                "Enroll your for voice only attendance"
+            )
 
             audio_data = None
 
             try:
-                audio_data = st.audio_input('Record a short phrase like I am present, My name is Akash.')
+                audio_data = st.audio_input(
+                    'Record a short phrase like I am present, My name is Akash.'
+                )
             except Exception:
                 st.error('Audio Data failed!')
 
-            if st.button('Create Account', type='primary'):
+            if st.button(
+                'Create Account',
+                type='primary'
+            ):
+
                 if new_name:
+
                     with st.spinner('Creating profile..'):
-                        img = np.array(Image.open(photo_source))
-                        encodings= get_face_embeddings(img)
-                        if encodings:
-                            face_emb = encodings[0].tolist()
 
-                            voice_emb = None
-                            if audio_data:
-                                voice_emb = get_voice_embedding(audio_data.read())
-
-                            response_data = create_student(new_name, face_embedding=face_emb, voice_embedding=voice_emb)
-
-                            if response_data:
-                                train_classifier()
-                                st.session_state.is_logged_in = True
-                                st.session_state.user_role = 'student'
-                                st.session_state.student_data = response_data[0]
-                                st.toast(f'Profile Created! Hi {new_name}!')
-                                time.sleep(1)
-                                st.rerun()
+                        # Use the captured face photo
+                        if photo_source is None:
+                            st.error(
+                                'Please capture your face again.'
+                            )
                         else:
-                            st.error('Couldnt capture your facial features for registration')
+                            img = np.array(
+                                Image.open(photo_source)
+                            )
+
+                            encodings = get_face_embeddings(img)
+
+                            if encodings:
+
+                                face_emb = encodings[0].tolist()
+
+                                voice_emb = None
+
+                                if audio_data:
+                                    voice_emb = get_voice_embedding(
+                                        audio_data.read()
+                                    )
+
+                                response_data = create_student(
+                                    new_name,
+                                    face_embedding=face_emb,
+                                    voice_embedding=voice_emb
+                                )
+
+                                if response_data:
+
+                                    train_classifier()
+
+                                    st.session_state.is_logged_in = True
+                                    st.session_state.user_role = 'student'
+                                    st.session_state.student_data = response_data[0]
+
+                                    # Reset registration state
+                                    st.session_state.show_registration = False
+
+                                    st.toast(
+                                        f'Profile Created! Hi {new_name}!'
+                                    )
+
+                                    time.sleep(1)
+                                    st.rerun()
+
+                            else:
+                                st.error(
+                                    'Couldnt capture your facial features for registration'
+                                )
 
                 else:
-                    st.warning('Please enter your name!')
+                    st.warning(
+                        'Please enter your name!'
+                    )
 
-
-        
     footer_dashboard()
+```
+
+### After replacing the file
+
+Run:
+
+```bash
+git add src/screens/student_screen.py
+git commit -m "Fix new student registration state"
+git push
+```
+
+Then wait for Streamlit Cloud to redeploy.
+
+The expected flow will be:
+
+**Camera → Face not recognized → Registration form → Enter name → Optional voice → Create Account → Student Dashboard**.
