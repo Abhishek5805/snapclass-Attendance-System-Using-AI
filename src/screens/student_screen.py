@@ -95,7 +95,7 @@ def student_dashboard():
                 )
             )
         
-        footer_dashboard()
+    footer_dashboard()
 
 
 def student_screen():
